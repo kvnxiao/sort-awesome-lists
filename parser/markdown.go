@@ -18,15 +18,16 @@ import (
 )
 
 var (
-	rLine = regexp.MustCompile(`^\s*[*\-] \[.*?]\((https*|mailto):`)
+	rLine = regexp.MustCompile(`^\s*([*\-]) \[.*?]\((https*|mailto):`)
 	rUrl  = regexp.MustCompile(`\((https*://.*?)\)`)
 )
 
 type Repository struct {
-	url     *url.URL
-	text    string
-	stars   int
-	repoURL string
+	url       *url.URL
+	text      string
+	stars     int
+	repoURL   string
+	separator string
 }
 
 type GithubBlock struct {
@@ -87,7 +88,9 @@ func ParseMarkdown(url string) *Markdown {
 	start := 0
 	end := 0
 	for i, line := range lines {
-		if rLine.MatchString(line) {
+		submatches := rLine.FindStringSubmatch(line)
+		if len(submatches) > 0 {
+			separator := submatches[1]
 			if !marked {
 				marked = true
 				start = i
@@ -95,7 +98,7 @@ func ParseMarkdown(url string) *Markdown {
 			} else {
 				end++
 			}
-			repositories = append(repositories, parseRepoText(line))
+			repositories = append(repositories, parseRepoText(line, separator))
 		} else {
 			if marked {
 				blocks = append(blocks, &GithubBlock{
@@ -122,7 +125,7 @@ func ParseMarkdown(url string) *Markdown {
 	}
 }
 
-func parseRepoText(line string) *Repository {
+func parseRepoText(line, separator string) *Repository {
 	submatch := rUrl.FindStringSubmatch(line)
 	if len(submatch) < 2 {
 		return &Repository{
@@ -130,6 +133,7 @@ func parseRepoText(line string) *Repository {
 			url:     nil,
 			stars:   0,
 			repoURL: "",
+			separator: separator,
 		}
 	}
 
@@ -149,6 +153,7 @@ func parseRepoText(line string) *Repository {
 		url:     u,
 		stars:   0,
 		repoURL: repoURL,
+		separator: separator,
 	}
 }
 
@@ -178,8 +183,8 @@ func (md *Markdown) Sort() {
 		for i, repo := range githubBlock.repositories {
 			index := start + i
 			numStr := strings.Replace(fmt.Sprintf("<code>%6s</code>", strconv.Itoa(repo.stars)), " ", "&nbsp;", -1)
-			indexOfFirstAsterisk := strings.Index(repo.text, "* ")
-			md.lines[index] = repo.text[:indexOfFirstAsterisk] + "* **" + numStr + "** " + repo.text[indexOfFirstAsterisk+2:]
+			indexOfFirstSeparator := strings.Index(repo.text, repo.separator + " ")
+			md.lines[index] = repo.text[:indexOfFirstSeparator] + repo.separator + " **" + numStr + "** " + repo.text[indexOfFirstSeparator+2:]
 		}
 	}
 }
