@@ -8,6 +8,9 @@ import (
 func GetApiEndpoint(hostname string, path string) string {
 	if hostname == HostName {
 		split := strings.Split(path, "/")
+		if len(split) < 3 {
+			return ""
+		}
 		split = split[:3]
 		return GetReposEndpoint(strings.Join(split, "/"))
 	} else if strings.HasSuffix(hostname, ".github.io") {
