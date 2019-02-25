@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	rLine = regexp.MustCompile(`^\s*\* \[`)
+	rLine = regexp.MustCompile(`^\s*[*\-] \[.*?]\((https*|mailto):`)
 	rUrl  = regexp.MustCompile(`\((https*://.*?)\)`)
 )
 
@@ -124,6 +124,15 @@ func ParseMarkdown(url string) *Markdown {
 
 func parseRepoText(line string) *Repository {
 	submatch := rUrl.FindStringSubmatch(line)
+	if len(submatch) < 2 {
+		return &Repository{
+			text:    line,
+			url:     nil,
+			stars:   0,
+			repoURL: "",
+		}
+	}
+
 	urlString := submatch[1]
 	u, err := url.Parse(urlString)
 	if err != nil {
