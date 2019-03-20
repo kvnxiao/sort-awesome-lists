@@ -125,34 +125,45 @@ func ParseMarkdown(url string) *Markdown {
 	}
 }
 
+// parseRepoText attempts to parse a line for a github repository url entry
 func parseRepoText(line, separator string) *Repository {
-	submatch := rUrl.FindStringSubmatch(line)
-	if len(submatch) < 2 {
-		return &Repository{
-			text:    line,
-			url:     nil,
-			stars:   0,
-			repoURL: "",
-			separator: separator,
+	submatch := rUrl.FindAllStringSubmatch(line, -1)
+
+	for _, match := range submatch {
+		if len(match) < 2 {
+			continue
+		}
+
+		// check url string without parentheses if it matches a github link
+		urlString := match[1]
+		u, err := url.Parse(urlString)
+		if err != nil {
+			log.Fatalf("an error occurred parsing url %s for potential repository: %s", urlString, err)
+		}
+
+		// parse hostname and path for potential github repo api endpoint
+		hostname := u.Hostname()
+		path := u.Path
+		repoURL := github.GetApiEndpoint(hostname, path)
+
+		// non-empty repo url means we found a github repo
+		if repoURL != "" {
+			return &Repository{
+				text:      line,
+				url:       u,
+				stars:     0,
+				repoURL:   repoURL,
+				separator: separator,
+			}
 		}
 	}
 
-	urlString := submatch[1]
-	u, err := url.Parse(urlString)
-	if err != nil {
-		log.Fatalf("an error occurred parsing repositories %s: %v", urlString, err)
-	}
-
-	// parse hostname and path for potential github repo api endpoint
-	hostname := u.Hostname()
-	path := u.Path
-	repoURL := github.GetApiEndpoint(hostname, path)
-
+	// default case for no matches found
 	return &Repository{
-		text:    line,
-		url:     u,
-		stars:   0,
-		repoURL: repoURL,
+		text:      line,
+		url:       nil,
+		stars:     0,
+		repoURL:   "",
 		separator: separator,
 	}
 }
@@ -183,7 +194,7 @@ func (md *Markdown) Sort() {
 		for i, repo := range githubBlock.repositories {
 			index := start + i
 			numStr := strings.Replace(fmt.Sprintf("<code>%6s</code>", strconv.Itoa(repo.stars)), " ", "&nbsp;", -1)
-			indexOfFirstSeparator := strings.Index(repo.text, repo.separator + " ")
+			indexOfFirstSeparator := strings.Index(repo.text, repo.separator+" ")
 			md.lines[index] = repo.text[:indexOfFirstSeparator] + repo.separator + " **" + numStr + "** " + repo.text[indexOfFirstSeparator+2:]
 		}
 	}
