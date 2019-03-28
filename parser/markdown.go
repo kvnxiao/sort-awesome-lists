@@ -18,8 +18,16 @@ import (
 )
 
 var (
-	rLine = regexp.MustCompile(`^\s*([*\-]) \[.*?]\((https*|mailto):`)
-	rUrl  = regexp.MustCompile(`\((https*://.*?)\)`)
+	regexUrlLine      = regexp.MustCompile(`^\s*([*\-]) \[.*?]\((https*|mailto):`)
+	regexSimpleUrl    = regexp.MustCompile(`\((https*://.*?)\)`)
+	regexHrefIsGithub = regexp.MustCompile(`href="*(https*://github.com/[^\s"]+)"*`)
+	linksToIgnore     = []string{
+		"meetup.com",
+		"youtube.com",
+		"google.com",
+		"reddit.com",
+		"twitter.com",
+	}
 )
 
 type Repository struct {
@@ -88,7 +96,7 @@ func ParseMarkdown(url string) *Markdown {
 	start := 0
 	end := 0
 	for i, line := range lines {
-		submatches := rLine.FindStringSubmatch(line)
+		submatches := regexUrlLine.FindStringSubmatch(line)
 		if len(submatches) > 0 {
 			separator := submatches[1]
 			if !marked {
@@ -127,24 +135,16 @@ func ParseMarkdown(url string) *Markdown {
 
 // parseRepoText attempts to parse a line for a github repository url entry
 func parseRepoText(line, separator string) *Repository {
-	submatch := rUrl.FindAllStringSubmatch(line, -1)
+	submatch := regexSimpleUrl.FindAllStringSubmatch(line, -1)
 
 	for _, match := range submatch {
 		if len(match) < 2 {
 			continue
 		}
 
-		// check url string without parentheses if it matches a github link
+		// check match string without parentheses, to see if it matches a url with http:// or https://
 		urlString := match[1]
-		u, err := url.Parse(urlString)
-		if err != nil {
-			log.Fatalf("an error occurred parsing url %s for potential repository: %s", urlString, err)
-		}
-
-		// parse hostname and path for potential github repo api endpoint
-		hostname := u.Hostname()
-		path := u.Path
-		repoURL := github.GetApiEndpoint(hostname, path)
+		u, repoURL := parseURLForGithubAPIEndpoint(urlString)
 
 		// non-empty repo url means we found a github repo
 		if repoURL != "" {
@@ -154,6 +154,21 @@ func parseRepoText(line, separator string) *Repository {
 				stars:     0,
 				repoURL:   repoURL,
 				separator: separator,
+			}
+		}
+
+		// empty repo url means we haven't found a direct github repo, try retrieving the HTML contents
+		githubURL := readHTMLTextForGithubURL(urlString)
+		if githubURL != "" {
+			u, repoURL := parseURLForGithubAPIEndpoint(githubURL)
+			if repoURL != "" {
+				return &Repository{
+					text:      line,
+					url:       u,
+					stars:     0,
+					repoURL:   repoURL,
+					separator: separator,
+				}
 			}
 		}
 	}
@@ -166,6 +181,60 @@ func parseRepoText(line, separator string) *Repository {
 		repoURL:   "",
 		separator: separator,
 	}
+}
+
+// parseURLForGithubAPIEndpoint parses a url string for a potential github repository
+// i.e. github.com/USERNAME/REPO_NAME
+//  or  USERNAME.github.io/REPO_NAME
+func parseURLForGithubAPIEndpoint(urlString string) (*url.URL, string) {
+	u, err := url.Parse(urlString)
+	if err != nil {
+		log.Fatalf("an error occurred parsing url %s for potential repository: %s", urlString, err)
+	}
+
+	// parse hostname and path for potential github repo api endpoint
+	hostname := u.Hostname()
+	path := u.Path
+	repoURL := github.GetApiEndpoint(hostname, path)
+	return u, repoURL
+}
+
+// readHTMLTextForGithubURL fetches the html contents from a url and parses the contents for a potential github link
+func readHTMLTextForGithubURL(urlString string) string {
+	if filterOutUrl(urlString) {
+		return ""
+	}
+
+	logging.Printlnf("checking HTML from %s", urlString)
+	resp, err := requests.Get(urlString, nil)
+	if err != nil {
+		logging.Printlnf("a non-fatal error occurred retrieving the HTML for url (%s): %v", urlString, err)
+		return ""
+	}
+	defer resp.Body.Close()
+
+	htmlText, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		logging.Printlnf("a non-fatal error occurred reading the HTML for url (%s): %v", urlString, err)
+		return ""
+	}
+
+	submatch := regexHrefIsGithub.FindStringSubmatch(string(htmlText))
+	if len(submatch) < 2 {
+		return ""
+	}
+
+	return submatch[1]
+}
+
+// filterOutUrl ignores known links that would not contain a github link in the html contents
+func filterOutUrl(urlString string) bool {
+	for _, s := range linksToIgnore {
+		if strings.Contains(urlString, s) {
+			return true
+		}
+	}
+	return false
 }
 
 func (md *Markdown) CountAll() int {
