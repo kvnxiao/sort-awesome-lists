@@ -54,7 +54,7 @@ func getRepoStars(repoURL string, token string, retries int) int {
 			time.Sleep(500 * time.Millisecond)
 			return getRepoStars(repoURL, token, retries-1)
 		} else {
-			fmt.Printf("failed to retrieve stats for %s after 5 retries", repoURL)
+			fmt.Printf("failed to retrieve stats for %s after 5 retries\n", repoURL)
 			return 0
 		}
 	}
