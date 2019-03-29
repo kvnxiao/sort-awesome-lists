@@ -15,8 +15,9 @@ import (
 func main() {
 	// flags setup
 	tokenPtr := flag.String("t", "", "GitHub personal access token")
-	verbosePtr := flag.Bool("v", false, "prints debug messages to stdout if true")
+	verbosePtr := flag.Bool("v", false, "prints debug messages to stdout if true (default = false)")
 	outputPtr := flag.String("o", "", "name of file to write output to if set, otherwise prints to stdout")
+	subBlockSizePtr := flag.Int("bs", 10, "number of concurrent requests to send to GitHub API at a time, per each block found (default = 10).")
 	flag.Parse()
 
 	// read token
@@ -42,7 +43,7 @@ func main() {
 	outputFilePath := checkFilePath(outputFileName)
 
 	// parse and sort markdown by number of github stars
-	md := parseAndSort(link, token)
+	md := parseAndSort(link, token, *subBlockSizePtr)
 	sortedContents := md.ToString()
 
 	if outputFilePath != "" {
@@ -78,9 +79,9 @@ func fileExists(path string) bool {
 	}
 }
 
-func parseAndSort(link, token string) *parser.Markdown {
+func parseAndSort(link, token string, subBlockSize int) *parser.Markdown {
 	md := parser.ParseMarkdown(link)
-	md.FetchStars(token)
+	md.FetchStars(token, subBlockSize)
 	md.Sort()
 	return md
 }

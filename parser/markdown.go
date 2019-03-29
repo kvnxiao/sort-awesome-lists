@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"math"
 	"net/url"
 	"regexp"
 	"sort"
@@ -27,6 +28,8 @@ var (
 		"google.com",
 		"reddit.com",
 		"twitter.com",
+		"medium.com",
+		"libhunt.com",
 	}
 )
 
@@ -245,12 +248,12 @@ func (md *Markdown) CountAll() int {
 	return c
 }
 
-func (md *Markdown) FetchStars(token string) {
+func (md *Markdown) FetchStars(token string, subBlockSize int) {
 	blockCount := len(md.blocks)
 
 	logging.Printlnf("%d blocks to fetch info for", blockCount)
 	for i, githubBlock := range md.blocks {
-		githubBlock.fetchStars(token, i)
+		githubBlock.fetchStars(token, i, subBlockSize)
 	}
 }
 
@@ -273,26 +276,35 @@ func (md *Markdown) ToString() string {
 	return strings.Join(md.lines, "\n")
 }
 
-func (b *GithubBlock) fetchStars(token string, blockNumber int) {
+func (b *GithubBlock) fetchStars(token string, blockNumber int, subBlockSize int) {
 	repoCount := len(b.repositories)
-	var wg sync.WaitGroup
-	wg.Add(repoCount)
 
-	logging.Printlnf("Started fetching stars for block %d.", blockNumber)
-	for _, repository := range b.repositories {
-		repository := repository
+	subBlocks := int(math.Ceil(float64(repoCount) / float64(subBlockSize)))
 
-		go func(repo *Repository) {
-			if repo.repoURL != "" {
-				repo.stars = github.GetRepoStars(repository.repoURL, token)
-			} else {
-				repo.stars = 0
-			}
+	logging.Printlnf("Started fetching stars for block %d. Splitting into %d sub-blocks of size %d", blockNumber, subBlocks, subBlockSize)
 
-			wg.Done()
-		}(repository)
+	for i := 0; i < subBlocks; i++ {
+		start := i * subBlockSize
+		end := int(math.Min(float64((i+1)*subBlockSize), float64(repoCount)))
 
+		var wg sync.WaitGroup
+		wg.Add(end - start)
+
+		for index := start; index < end; index++ {
+			repository := b.repositories[index]
+
+			go func(repo *Repository) {
+				if repo.repoURL != "" {
+					repo.stars = github.GetRepoStars(repository.repoURL, token)
+				} else {
+					repo.stars = 0
+				}
+
+				wg.Done()
+			}(repository)
+		}
+
+		wg.Wait()
 	}
-	wg.Wait()
 	logging.Printlnf("fetching stars for block %d done.", blockNumber)
 }
