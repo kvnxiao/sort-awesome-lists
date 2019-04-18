@@ -11,6 +11,8 @@ This is a CLI application written in Go and uses 0 external dependencies.
 
 Sorting by stars implies parsing the original awesome-list `README.md` file and outputting a modified version where each section is sorted in descending order by the number of stars (for each valid github repository).
 
+GitHub repository detection involves checking each markdown bullet point if it contains a `username.github.io/repo` or `github.com/username/repo` link. Otherwise, if a project website is linked, the application will attempt to download and parse the webpage to check if a GitHub repository link exists within the HTML.
+
 ## How to use
 
 `sort-awesome-lists` is a CLI application. Build it and run in your terminal.
