@@ -29,11 +29,13 @@ Creates an executable file called `sort-awesome-lists` in your directory. Run in
 
 ```
 Usage of sort-awesome-lists:
+  -bs int
+        number of concurrent requests to send to GitHub API at a time, per each block found. (default 5)
   -o string
         name of file to write output to if set, otherwise prints to stdout
-  -t string (REQUIRED)
+  -t string
         GitHub personal access token
-  -v    prints debug messages to stdout if true
+  -v    prints debug messages to stdout if true (default = false)
 ```
 
 A GitHub personal access token is **required** by the `-t` flag as this CLI application hits the GitHub API for repository statistics. The token allows one to access the GitHub API at a rate-limit of 5000 requests per hour. A personal access token with 0 permissions checked can be generated and used (go here to create one if you don't already have one: https://github.com/settings/tokens)
