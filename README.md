@@ -41,7 +41,7 @@ Usage of sort-awesome-lists:
 
 A GitHub personal access token is **required** by the `-t` flag as this CLI application hits the GitHub API for repository statistics. The token allows one to access the GitHub API at a rate-limit of 5000 requests per hour. A personal access token with 0 permissions checked can be generated and used (go here to create one if you don't already have one: https://github.com/settings/tokens)
 
-The application currently supports `username.github.io/repo` and `github.com/username/repo` detection.
+This tool currently supports `username.github.io/repo` and `github.com/username/repo` detection.
 
 #### Example:
 
@@ -51,3 +51,7 @@ The application currently supports `username.github.io/repo` and `github.com/use
 where `$token` is your github personal access token.
 
 The above example will download and parse the markdown file from `https://raw.githubusercontent.com/avelino/awesome-go/master/README.md`, and output a sorted markdown output in a file called `awesome-go-sorted.md` in the same working directory.
+
+### Known Issues / Gotchas
+
+For entries in a list that do not directly link to `github.com/username/repo` or `username.github.io/repo`, the webpage will be downloaded and parsed to check if a GitHub repository link exists within the HTML. This means that this tool will be unable to pick up any links for websites that use a JavaScript framework and require JavaScript to render the page.
