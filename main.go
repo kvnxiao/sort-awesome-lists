@@ -17,7 +17,7 @@ func main() {
 	tokenPtr := flag.String("t", "", "GitHub personal access token")
 	verbosePtr := flag.Bool("v", false, "prints debug messages to stdout if true (default = false)")
 	outputPtr := flag.String("o", "", "name of file to write output to if set, otherwise prints to stdout")
-	subBlockSizePtr := flag.Int("bs", 10, "number of concurrent requests to send to GitHub API at a time, per each block found (default = 10).")
+	subBlockSizePtr := flag.Int("bs", 5, "number of concurrent requests to send to GitHub API at a time, per each block found.")
 	flag.Parse()
 
 	// read token
