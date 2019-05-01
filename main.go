@@ -36,7 +36,7 @@ func main() {
 		log.Fatalf("A URL to the markdown file must be provided!")
 	}
 	link := args[0]
-	logging.Printlnf("URL to parse markdown: %s", link)
+	logging.Verbosef("URL to parse markdown: %s", link)
 
 	// check file path
 	outputFileName := *outputPtr
@@ -51,6 +51,7 @@ func main() {
 		if err != nil {
 			log.Fatalf("failed to write to file %s: %v", outputFileName, err)
 		}
+		fmt.Printf("Wrote to file: %s\n", outputFileName)
 	} else {
 		fmt.Println(sortedContents)
 	}

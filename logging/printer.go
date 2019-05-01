@@ -12,14 +12,20 @@ func SetVerbose(b bool) {
 	verboseFlagEnabled = b
 }
 
-func Println(a ...interface{}) {
+func Verbose(a ...interface{}) {
 	if verboseFlagEnabled {
 		fmt.Println(a...)
 	}
 }
 
-func Printlnf(format string, a ...interface{}) {
+func Verbosef(format string, a ...interface{}) {
 	if verboseFlagEnabled {
 		fmt.Printf(format+"\n", a...)
+	}
+}
+
+func Inlinef(format string, a ...interface{}) {
+	if !verboseFlagEnabled {
+		fmt.Printf("\r"+format, a...)
 	}
 }

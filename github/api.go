@@ -28,7 +28,7 @@ func fetchRepoJson(repoURL string, token string) Repository {
 		"Authorization": {"token " + token},
 	})
 	if err != nil {
-		logging.Printlnf("an error occurred in fetching repository %s: %v", repoURL, err)
+		logging.Verbosef("an error occurred in fetching repository %s: %v", repoURL, err)
 		return Repository{}
 	}
 	defer resp.Body.Close()
@@ -36,7 +36,7 @@ func fetchRepoJson(repoURL string, token string) Repository {
 	var repo Repository
 	err = decoder.Decode(&repo)
 	if err != nil {
-		logging.Printlnf("could not decode JSON body for repository %s", repoURL)
+		logging.Verbosef("could not decode JSON body for repository %s", repoURL)
 		return Repository{}
 	}
 	return repo
@@ -50,7 +50,7 @@ func getRepoStars(repoURL string, token string, retries int) int {
 	repo := fetchRepoJson(repoURL, token)
 	if repo.Message != "" && repo.Message != "Not Found" {
 		if retries > 0 {
-			logging.Printlnf("temporary error message for repo %s: %s. Retrying...", repoURL, repo.Message)
+			logging.Verbosef("temporary error message for repo %s: %s. Retrying...", repoURL, repo.Message)
 			time.Sleep(500 * time.Millisecond)
 			return getRepoStars(repoURL, token, retries-1)
 		} else {

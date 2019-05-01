@@ -75,7 +75,8 @@ type Markdown struct {
 }
 
 func ParseMarkdown(url string) *Markdown {
-	logging.Println("Retrieving markdown...")
+	defer fmt.Println(" Done!")
+	logging.Verbose("Retrieving markdown...")
 	now := time.Now()
 	resp, err := requests.Get(url, nil)
 	if err != nil {
@@ -83,7 +84,7 @@ func ParseMarkdown(url string) *Markdown {
 	}
 	defer resp.Body.Close()
 	took := time.Now().Sub(now)
-	logging.Printlnf("Markdown retrieved in %v", took.String())
+	logging.Verbosef("Markdown retrieved in %v", took.String())
 
 	b, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
@@ -99,6 +100,7 @@ func ParseMarkdown(url string) *Markdown {
 	start := 0
 	end := 0
 	for i, line := range lines {
+		logging.Inlinef("Parsing markdown for potential repository links: %d/%d lines.", i+1, len(lines))
 		submatches := regexUrlLine.FindStringSubmatch(line)
 		if len(submatches) > 0 {
 			separator := submatches[1]
@@ -208,17 +210,17 @@ func readHTMLTextForGithubURL(urlString string) string {
 		return ""
 	}
 
-	logging.Printlnf("checking HTML from %s", urlString)
+	logging.Verbosef("checking HTML from %s", urlString)
 	resp, err := requests.Get(urlString, nil)
 	if err != nil {
-		logging.Printlnf("a non-fatal error occurred retrieving the HTML for url (%s): %v", urlString, err)
+		logging.Verbosef("a non-fatal error occurred retrieving the HTML for url (%s): %v", urlString, err)
 		return ""
 	}
 	defer resp.Body.Close()
 
 	htmlText, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		logging.Printlnf("a non-fatal error occurred reading the HTML for url (%s): %v", urlString, err)
+		logging.Verbosef("a non-fatal error occurred reading the HTML for url (%s): %v", urlString, err)
 		return ""
 	}
 
@@ -249,17 +251,20 @@ func (md *Markdown) CountAll() int {
 }
 
 func (md *Markdown) FetchStars(token string, subBlockSize int) {
+	defer fmt.Println(" Done!")
 	blockCount := len(md.blocks)
 
-	logging.Printlnf("%d blocks to fetch info for", blockCount)
 	for i, githubBlock := range md.blocks {
+		logging.Inlinef("Found %d blocks of repositories. Fetching stars for blocks: %d/%d.", blockCount, i+1, blockCount)
 		githubBlock.fetchStars(token, i, subBlockSize)
 	}
 }
 
 func (md *Markdown) Sort() {
+	defer fmt.Println(" Done!")
 	for blockNum, githubBlock := range md.blocks {
-		logging.Printlnf("Sorting block %d", blockNum)
+		logging.Verbosef("Sorting block %d", blockNum)
+		logging.Inlinef("Sorting blocks by stars: %d/%d.", blockNum+1, len(md.blocks))
 		sort.Sort(ByStars(githubBlock.repositories))
 
 		start := githubBlock.start
@@ -281,7 +286,7 @@ func (b *GithubBlock) fetchStars(token string, blockNumber int, subBlockSize int
 
 	subBlocks := int(math.Ceil(float64(repoCount) / float64(subBlockSize)))
 
-	logging.Printlnf("Started fetching stars for block %d. Splitting into %d sub-blocks of size %d", blockNumber, subBlocks, subBlockSize)
+	logging.Verbosef("Started fetching stars for block %d. Splitting into %d sub-blocks of size %d", blockNumber, subBlocks, subBlockSize)
 
 	for i := 0; i < subBlocks; i++ {
 		start := i * subBlockSize
@@ -306,5 +311,5 @@ func (b *GithubBlock) fetchStars(token string, blockNumber int, subBlockSize int
 
 		wg.Wait()
 	}
-	logging.Printlnf("fetching stars for block %d done.", blockNumber)
+	logging.Verbosef("fetching stars for block %d done.", blockNumber)
 }
